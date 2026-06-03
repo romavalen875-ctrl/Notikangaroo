@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NOTI KANGAROO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:#0a0a0a;font-family:Arial;color:#fff}
+.header{background:#C6FF00;color:#000;text-align:center;padding:12px;font-weight:900;font-size:22px;position:sticky;top:0;z-index:10}
+.subheader{background:#111;color:#C6FF00;text-align:center;padding:6px;font-size:11px;font-weight:700;letter-spacing:1px}
+.actualizado{background:#1a1a1a;color:#888;text-align:center;padding:4px;font-size:9px}
+.menu{background:#111;padding:8px;position:sticky;top:46px;z-index:10;display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.menu button{background:#222;color:#fff;border:2px solid #333;padding:12px 4px;border-radius:5px;font-size:11px;font-weight:900}
+.menu button.on{background:#C6FF00;color:#000;border-color:#C6FF00}
+.lista{padding:8px}
+.nota{background:#111;border-left:4px solid #C6FF00;border-radius:5px;margin-bottom:10px;overflow:hidden}
+.nota img{width:100%;height:160px;object-fit:cover;display:block;background:#222}
+.nota .txt{padding:12px}
+.nota .tag{display:inline-block;background:#C6FF00;color:#000;font-size:9px;font-weight:900;padding:3px 6px;border-radius:3px;margin-bottom:6px}
+.nota h3{color:#fff;font-size:15px;margin-bottom:6px;line-height:1.3}
+.nota p{font-size:12px;color:#aaa;line-height:1.5;margin-bottom:8px}
+.nota .fecha{font-size:10px;color:#666;margin-bottom:8px}
+.nota a{display:block;background:#C6FF00;color:#000;text-decoration:none;padding:12px;text-align:center;font-weight:900;font-size:13px}
+.cargando{text-align:center;color:#C6FF00;padding:40px 20px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="header">NOTI KANGAROO</div>
+<div class="subheader">LAS NOTICIAS QUE SALTAN PRIMERO</div>
+<div class="actualizado" id="update">Cargando noticias...</div>
+
+<div class="menu">
+<button class="on" onclick="filtro('todo')">TODO</button>
+<button onclick="filtro('F1')">FÓRMULA 1</button>
+<button onclick="filtro('Fútbol')">FÚTBOL</button>
+<button onclick="filtro('Mundo')">MUNDIAL</button>
+</div>
+<div class="lista" id="lista"><div class="cargando">Cargando noticias de hoy...</div></div>
+
+<script>
+// ESTO SE ACTUALIZA SOLO CADA VEZ QUE ENTRÁS
+var noticias = [];
+
+// Uso RSS de Google News para traer noticias reales de hoy
+async function cargarNoticias(){
+const temas = [
+{cat:'F1',q:'Fórmula 1'},
+{cat:'Fútbol',q:'fútbol Argentina'},
+{cat:'Mundo',q:'noticias mundo'},
+{cat:'Mundo',q:'Argentina economía'}
+];
+
+for(let t of temas){
+try{
+let url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://news.google.com/rss/search?q='+t.q+'&hl=es-419&gl=AR&ceid=AR:es')}`;
+let res = await fetch(url);
+let data = await res.json();
+data.items.slice(0,3).forEach(n=>{
+noticias.push({
+t:n.title,
+d:n.description.replace(/<[^>]*>?/gm, '').substring(0,120)+'...',
+c:t.cat,
+f:new Date(n.pubDate).toLocaleDateString('es-AR',{day:'2-digit',month:'short'}).toUpperCase(),
+i:n.enclosure?.link || 'https://picsum.photos/400/200?random='+Math.random(),
+l:n.link
+});
+});
+}catch(e){}
+}
+mostrar(noticias);
+document.getElementById('update').textContent = 'Actualizado: '+new Date().toLocaleString('es-AR');
+}
+
+var catActual='todo';
+
+function mostrar(lista){
+var h='';
+if(lista.length===0){
+h='<div class="cargando">No hay noticias 😕</div>';
+}else{
+lista.forEach(n=>{
+var tags={F1:'FÓRMULA 1',Fútbol:'FÚTBOL',Mundo:'MUNDIAL'};
+h+=`<div class="nota">
+<img src="${n.i}" onerror="this.src='https://picsum.photos/400/200'">
+<div class="txt">
+<span class="tag">${tags[n.c]||'NOTICIA'}</span>
+<h3>${n.t}</h3>
+<div class="fecha">${n.f}</div>
+<p>${n.d}</p>
+</div>
+<a href="${n.l}" target="_blank">LEER NOTA COMPLETA</a>
+</div>`;
+});
+}
+document.getElementById('lista').innerHTML=h;
+}
+
+function filtro(cat){
+catActual=cat;
+document.querySelectorAll('.menu button').forEach(b=>b.className='');
+event.target.className='on';
+var filtradas = cat==='todo'? noticias : noticias.filter(n=>n.c===cat);
+mostrar(filtradas);
+}
+
+cargarNoticias();
+// Se actualiza cada 30 minutos solo
+setInterval(cargarNoticias,1800000);
+</script>
+</body>
+</html>
